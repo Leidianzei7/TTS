@@ -1,0 +1,36 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# 虚拟环境
+venv/
+env/
+.venv/
+
+# 模型缓存（FunASR 会下载到 ~/.cache，无需追踪）
+*.pt
+*.bin
+*.onnx
+*.ckpt
+
+# 日志 / 临时录音
+*.wav
+*.mp3
+*.log
+*.tmp
+
+# IDE
+.vscode/
+.idea/
