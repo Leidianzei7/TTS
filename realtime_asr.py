@@ -17,6 +17,7 @@ import soundfile as sf
 from funasr import AutoModel
 from funasr.utils.postprocess_utils import rich_transcription_postprocess
 from openai import OpenAI
+from pypinyin import lazy_pinyin
 
 # ── 设备配置 ──────────────────────────────────────────────
 DEVICE_INDEX = 2
@@ -30,7 +31,9 @@ SPEECH_HOLD_SEC   = 1.5
 MIN_SPEECH_SEC    = 0.3
 
 # ── 唤醒词 ────────────────────────────────────────────────
-WAKE_WORD = "小智小智"
+WAKE_WORD    = "小智小智"
+_WW_LEN      = len(WAKE_WORD)
+_WW_PINYIN   = "".join(lazy_pinyin(WAKE_WORD))   # "xiaozhixiaozhi"，不含声调
 
 # ── LLM 配置 ──────────────────────────────────────────────
 LLM_API_KEY  = "sk-1c3077000f6347858d88c0936169d5af"
@@ -87,6 +90,17 @@ def recognize(audio_np: np.ndarray) -> str:
         os.remove(tmp_path)
 
 
+def find_wake_word(text: str) -> int:
+    """返回唤醒词在 text 中的起始字符索引，未找到返回 -1。
+    先精确匹配，再按拼音（不含声调）滑窗匹配，覆盖近同音字。"""
+    if WAKE_WORD in text:
+        return text.index(WAKE_WORD)
+    for i in range(len(text) - _WW_LEN + 1):
+        if "".join(lazy_pinyin(text[i:i + _WW_LEN])) == _WW_PINYIN:
+            return i
+    return -1
+
+
 def parse_instructions(text: str) -> str:
     resp = llm_client.chat.completions.create(
         model=LLM_MODEL,
@@ -101,8 +115,9 @@ def parse_instructions(text: str) -> str:
 def handle_asr_result(text: str):
     global waiting_for_command
 
-    if WAKE_WORD in text:
-        cmd = text[text.index(WAKE_WORD) + len(WAKE_WORD):].strip("，。,.： ")
+    pos = find_wake_word(text)
+    if pos >= 0:
+        cmd = text[pos + _WW_LEN:].strip("，。,.： ")
         if cmd:
             print(f"📋 指令原文: {cmd}", flush=True)
             print("⏳ 解析中...", flush=True)
