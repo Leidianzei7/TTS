@@ -15,9 +15,10 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 
-sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent))
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from realtime_asr.llm import generate_response, _SYSTEM_PROMPT
+from realtime_asr.llm import generate_response
 from realtime_asr.tts import stream_play
 
 
@@ -33,7 +34,6 @@ class BrainNode(Node):
         threading.Thread(target=self._work_loop, daemon=True).start()
 
         self.get_logger().info("brain_node 就绪，等待 /voice/command")
-        self.get_logger().debug(f"系统提示词前100字：{_SYSTEM_PROMPT[:100]}")
 
     def _on_command(self, msg: String):
         self._work_q.put(msg.data)
@@ -43,7 +43,7 @@ class BrainNode(Node):
             cmd = self._work_q.get()
             self.get_logger().info(f"收到指令: {cmd}")
             try:
-                spoken, commands = generate_response(cmd, system_prompt=_SYSTEM_PROMPT)
+                spoken, commands = generate_response(cmd)
 
                 if spoken:
                     self.get_logger().info(f"语音回复: {spoken}")
