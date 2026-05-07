@@ -22,6 +22,29 @@
 - [x] 代码拆分为 `realtime_asr/` 包（config / audio / asr / llm / tts / wake_word / state）
 - [ ] 视觉多模态扩展
 
+## 分支工作流（严格遵守，勿误改）
+
+| 改动范围 | 工作分支 | 同步方式 |
+|---|---|---|
+| `realtime_asr/`、根目录文件 | `dev` | 改完 merge 到 `main` |
+| `ros_voice/` | `ros2_nodes` | 改完 merge 到 `main` |
+
+**规则：在任何分支上动手之前，必须先从 `main` pull（`git merge main`），防止覆盖他人改动。**
+
+```
+# dev 上开发
+git checkout dev && git merge main
+# ...改动...
+git checkout main && git merge dev
+
+# ros2_nodes 上开发
+git checkout ros2_nodes && git merge main
+# ...改动...
+git checkout main && git merge ros2_nodes
+```
+
+`mac_complete` 是 ROS 改造前的 Mac 完整版快照，不再更新。
+
 ## 研发思路
 参考代码（ref codes/）覆盖：录音、VAD、ASR、LLM对话、TTS合成、多模态视觉。
 演进路径：录音验证 → 实时ASR → 接入LLM对话 → TTS语音回复 → 视觉多模态扩展
