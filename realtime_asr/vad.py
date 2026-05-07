@@ -101,9 +101,10 @@ def _run_webrtc(audio_q, running, on_speech, log):
                 speech_cnt += 1
                 silence_cnt = 0
                 if not in_speech:
+                    pre_buf.append(frame)  # 暂存触发窗口内的语音帧，防止起始音节丢失
                     if speech_cnt >= VAD_SPEECH_TRIGGER:
                         in_speech     = True
-                        speech_frames = list(pre_buf) + [frame]
+                        speech_frames = list(pre_buf)
                         log("正在聆听...")
                 else:
                     speech_frames.append(frame)

@@ -90,5 +90,11 @@ def process_loop():
         db = lambda r: 20 * np.log10(max(r, 1))
         print(f"📊 底噪 {db(noise_floor):.1f} dB，检测阈值 {db(threshold):.1f} dB\n", flush=True)
         stream_play("校准完成，可以开始说话了")
+        # 清空 TTS 播放期间麦克风采集到的回声/环境音，防止 VAD 误判
+        while not _state.audio_q.empty():
+            try:
+                _state.audio_q.get_nowait()
+            except queue.Empty:
+                break
 
     run_vad(_state.audio_q, _state.running, _on_speech, print, noise_floor)
