@@ -26,21 +26,21 @@
 
 | 改动范围 | 工作分支 | 同步方式 |
 |---|---|---|
-| `realtime_asr/`、根目录文件 | `dev` | 改完 merge 到 `main` |
-| `ros_voice/` | `ros2_nodes` | 改完 merge 到 `main` |
+| `realtime_asr/`、根目录文件 | `asrdev` | 改完 merge 到 `main` |
+| `ros_voice/` | `rosdev` | 改完 merge 到 `main` |
 
 **规则：在任何分支上动手之前，必须先从 `main` pull（`git merge main`），防止覆盖他人改动。**
 
 ```
-# dev 上开发
-git checkout dev && git merge main
+# asrdev 上开发
+git checkout asrdev && git merge main
 # ...改动...
-git checkout main && git merge dev
+git checkout main && git merge asrdev
 
-# ros2_nodes 上开发
-git checkout ros2_nodes && git merge main
+# rosdev 上开发
+git checkout rosdev && git merge main
 # ...改动...
-git checkout main && git merge ros2_nodes
+git checkout main && git merge rosdev
 ```
 
 历史备注：`mac_complete` 为 ROS 改造前的 Mac 完整版快照，已删除。
