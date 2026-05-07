@@ -34,3 +34,5 @@ env/
 # IDE
 .vscode/
 .idea/
+.claude/settings.local.json
+MassAgent.textClipping
