@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import sys
+import json
 import queue
 import collections
 import numpy as np
@@ -19,28 +20,36 @@ def audio_callback(indata, frames, time_info, status):
     _state.audio_q.put(indata[:, 0].copy())
 
 
+def _dispatch_command(cmd):
+    print(f"📋 指令原文: {cmd}", flush=True)
+    print("⏳ 解析中...", flush=True)
+    spoken, commands = generate_response(cmd)
+    if spoken:
+        print(f"🔊 语音回复：{spoken}", flush=True)
+        _state.tts_text_q.put(spoken)
+    if commands:
+        print(f"\n✅ 标准化指令:\n{json.dumps(commands, ensure_ascii=False, indent=2)}\n", flush=True)
+    elif not spoken:
+        print("[警告] LLM 回复解析失败", flush=True)
+
+
 def handle_asr_result(text):
     pos, ww_len = find_wake_word(text)
     if pos >= 0:
-        cmd = text[pos + ww_len :].strip("，。,.： ")
+        cmd = text[pos + ww_len:].strip("，。,.： ")
         if cmd:
-            print(f"📋 指令原文: {cmd}", flush=True)
-            print("⏳ 解析中...", flush=True)
-            generate_response(cmd)
+            _dispatch_command(cmd)
         else:
             print("👂 已唤醒，请说出指令...", flush=True)
             _state.waiting_for_command = True
     elif _state.waiting_for_command:
         _state.waiting_for_command = False
-        print(f"📋 指令原文: {text}", flush=True)
-        print("⏳ 解析中...", flush=True)
-        generate_response(text)
+        _dispatch_command(text)
 
 
 def _sample_noise_floor():
     from .tts import stream_play
 
-    # 语音提示用户保持安静
     print("🔇 即将校准底噪，请保持安静...", flush=True)
     stream_play("请保持安静，正在校准底噪")
 
@@ -51,7 +60,6 @@ def _sample_noise_floor():
         except queue.Empty:
             break
 
-    # 采样，用中位数对偶发噪声免疫
     init_chunks = int(NOISE_INIT_SEC * SAMPLE_RATE / CHUNK)
     samples = []
     print(f"🔇 校准中（{NOISE_INIT_SEC:.1f}秒）...", flush=True)

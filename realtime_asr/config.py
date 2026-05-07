@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import os
 from pypinyin import lazy_pinyin
-from dashscope.audio.tts_v2 import AudioFormat
 
 # ── 设备配置 ──────────────────────────────────────────────
 # 运行 `python3 -c "import sounddevice as sd; print(sd.query_devices())"` 查看设备列表
@@ -40,18 +40,10 @@ _WW_PINYIN      = "".join(lazy_pinyin(WAKE_WORD))       # "xiaozhixiaozhi"
 _WWS_PINYIN     = "".join(lazy_pinyin(WAKE_WORD_SHORT)) # "xiaozhi"
 
 # ── LLM 配置 ──────────────────────────────────────────────
-LLM_API_KEY  = "sk-1c3077000f6347858d88c0936169d5af"
+# 推荐通过环境变量 DASHSCOPE_API_KEY 传入，避免明文写在代码里
+LLM_API_KEY  = os.getenv("DASHSCOPE_API_KEY", "sk-1c3077000f6347858d88c0936169d5af")
 LLM_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-LLM_MODEL    = "qwen-turbo"   # 可换 qwen-plus（更准）或 qwen-max（最强，更慢）
-LLM_SYSTEM   = (
-    "你是小智，一个智能语音助手。用户用语音下达指令，你必须严格按以下格式回复，"
-    "第一行必须是口语回复，第二行才是指令：\n"
-    "[口语回复]：<用自然口语化的1句话回应用户>\n"
-    "[执行指令]：\n"
-    "1. 动作一\n"
-    "2. 动作二\n\n"
-    "规则：[口语回复]必须在第一行且只占一行；只输出这两个部分，不要任何额外说明。"
-)
+LLM_MODEL    = "qwen-turbo"
 
 # ── TTS 配置 ──────────────────────────────────────────────
 # 可用中文音色（CosyVoice v2）：
@@ -59,4 +51,3 @@ LLM_SYSTEM   = (
 #   longxiaobai_v2（男，活泼）longxiaomiao_v2（女，知性）
 TTS_VOICE       = "longxiaochun_v2"
 TTS_SAMPLE_RATE = 16000
-TTS_FORMAT      = AudioFormat.WAV_16000HZ_MONO_16BIT
