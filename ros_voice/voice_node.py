@@ -99,6 +99,12 @@ class VoiceNode(Node):
             f"底噪 {db(noise_floor):.1f} dB，阈值 {db(threshold):.1f} dB"
         )
         stream_play("校准完成，可以开始说话了")
+        # 清空 TTS 播放期间采集到的回声/环境音，防止 VAD 误判
+        while not self._audio_q.empty():
+            try:
+                self._audio_q.get_nowait()
+            except queue.Empty:
+                break
         return noise_floor
 
     def _vad_thread(self):
