@@ -4,20 +4,23 @@
 > 对话变长时提醒用户执行 `/compact` 压缩上下文以节省 token。
 
 ## 硬件
-- 启英泰伦 USB 声音模块，sounddevice Index=2，2声道输入
+- 启英泰伦 USB 声音模块，sounddevice Index=2（麦克风）/ Index=1（扬声器）
 
 ## 技术栈
-- 音频采集：sounddevice（macOS无portaudio，弃用pyaudio）
-- VAD：RMS能量阈值（SILENCE_THRESHOLD=300）
-- 语音识别：FunASR SenseVoiceSmall + fsmn-vad，CPU推理
-- LLM：阿里云 DashScope Qwen（qwen-turbo），OpenAI 兼容格式
-- Python 3.9，无conda环境
+- 音频采集：sounddevice（macOS 无 portaudio，弃用 pyaudio）
+- VAD：双模式可切换（见下方关键参数）
+- 语音识别：FunASR SenseVoiceSmall + fsmn-vad，CPU 推理，直接传 numpy array
+- LLM：阿里云 DashScope Qwen（qwen-turbo），OpenAI 兼容格式，流式输出
+- TTS：DashScope CosyVoice v2，流式合成边合成边播，首字出声 ~100ms
+- Python 3.9，无 conda 环境
 
 ## 当前进度
 - [x] 设备检测与录音验证
-- [x] `realtime_asr.py`：实时采集 → VAD → SenseVoiceSmall → 屏幕打印
-- [x] 唤醒词"小智小智"触发 → ASR → Qwen LLM → 标准化编号指令输出
-- [ ] 下一步待定
+- [x] 实时采集 → VAD → SenseVoiceSmall → 屏幕打印
+- [x] 唤醒词触发（支持单个"小智"及近同音容错）→ ASR → Qwen LLM → 指令输出
+- [x] TTS 语音回复（流式，低延迟）
+- [x] 代码拆分为 `realtime_asr/` 包（config / audio / asr / llm / tts / wake_word / state）
+- [ ] 视觉多模态扩展
 
 ## 研发思路
 参考代码（ref codes/）覆盖：录音、VAD、ASR、LLM对话、TTS合成、多模态视觉。
@@ -25,14 +28,30 @@
 
 ## 运行
 ```bash
-python3 realtime_asr.py   # Ctrl+C 退出
+python3 main.py   # Ctrl+C 退出
 ```
 
-## 关键参数
+## 关键参数（realtime_asr/config.py）
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
-| DEVICE_INDEX | 2 | 启英泰伦设备 |
-| SILENCE_THRESHOLD | 300 | RMS噪音阈值，环境噪大时调高 |
-| SPEECH_HOLD_SEC | 1.5 | 停顿多久触发识别 |
-| WAKE_WORD | 小智小智 | 唤醒词，说出后下达指令 |
-| LLM_MODEL | qwen-turbo | DashScope 模型，base_url 华北2 |
+| DEVICE_INDEX | 2 | 麦克风设备 |
+| OUTPUT_DEVICE_INDEX | 1 | 扬声器设备 |
+| VAD_MODE | "energy" | VAD 模式："energy" 或 "webrtc" |
+| SPEECH_HOLD_SEC | 1.2 | 停顿多久触发识别（秒） |
+| WAKE_WORD | 小智小智 | 主唤醒词 |
+| WAKE_WORD_SHORT | 小智 | 单次唤醒词（含近同音容错） |
+| LLM_MODEL | qwen-turbo | DashScope 模型 |
+| TTS_VOICE | longxiaochun_v2 | CosyVoice v2 音色 |
+
+### VAD_MODE = "energy"（默认）
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| NOISE_INIT_SEC | 1.5 | 启动校准时长（秒），TTS 提示后采样中位数 |
+| NOISE_ALPHA | 0.01 | 底噪 EMA 更新速率 |
+| SPEECH_DELTA | 3000 | 阈值 = 底噪 RMS + 此值 |
+
+### VAD_MODE = "webrtc"（无需校准）
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| VAD_AGGRESSIVENESS | 3 | 0-3，越高越激进，3 适合空调环境 |
+| VAD_SPEECH_TRIGGER | 3 | 连续 N 帧（×20ms）确认语音才录制 |
