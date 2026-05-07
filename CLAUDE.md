@@ -43,7 +43,7 @@ git checkout ros2_nodes && git merge main
 git checkout main && git merge ros2_nodes
 ```
 
-`mac_complete` 是 ROS 改造前的 Mac 完整版快照，不再更新。
+历史备注：`mac_complete` 为 ROS 改造前的 Mac 完整版快照，已删除。
 
 ## 研发思路
 参考代码（ref codes/）覆盖：录音、VAD、ASR、LLM对话、TTS合成、多模态视觉。
