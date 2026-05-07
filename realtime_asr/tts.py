@@ -45,8 +45,7 @@ def stream_play(text):
             syn.call(text)
         except Exception as e:
             print(f"[TTS 错误] {e}", file=sys.stderr)
-        finally:
-            pcm_q.put(None)  # 确保 stream_play 不会因线程异常而永久阻塞
+            pcm_q.put(None)  # 仅在异常时手动解锁，正常结束由 on_complete 负责
 
     threading.Thread(target=_safe_call, daemon=True).start()
 
