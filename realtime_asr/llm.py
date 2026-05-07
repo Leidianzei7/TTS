@@ -3,9 +3,12 @@
 import sys
 import json
 from openai import OpenAI
-from .config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, LLM_SYSTEM
+from .config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+from .commands import build_system_prompt
 
 llm_client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
+
+_SYSTEM_PROMPT = build_system_prompt()
 
 _SPOKEN_PREFIX = "[口语回复]："
 _INSTR_PREFIX  = "[执行指令]："
@@ -13,7 +16,7 @@ _INSTR_PREFIX  = "[执行指令]："
 
 def generate_response(
     text: str,
-    system_prompt: str = LLM_SYSTEM,
+    system_prompt: str = _SYSTEM_PROMPT,
 ) -> tuple[str, list[dict]]:
     """
     调用 LLM，返回 (口语回复, 指令列表)。

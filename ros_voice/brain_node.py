@@ -17,11 +17,8 @@ from std_msgs.msg import String
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent))
 
-from realtime_asr.llm import generate_response
+from realtime_asr.llm import generate_response, _SYSTEM_PROMPT
 from realtime_asr.tts import stream_play
-from ros_voice.commands import build_system_prompt
-
-_SYSTEM_PROMPT = build_system_prompt()
 
 
 class BrainNode(Node):
