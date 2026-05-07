@@ -1,45 +1,68 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import sys
-import io
 import queue
+import threading
+import numpy as np
 import sounddevice as sd
-import soundfile as sf
 import dashscope
-from dashscope.audio.tts_v2 import SpeechSynthesizer
-from .config import TTS_VOICE, TTS_FORMAT, TTS_SAMPLE_RATE, OUTPUT_DEVICE_INDEX, LLM_API_KEY
+from dashscope.audio.tts_v2 import SpeechSynthesizer, AudioFormat, ResultCallback
+from .config import TTS_VOICE, TTS_SAMPLE_RATE, OUTPUT_DEVICE_INDEX, LLM_API_KEY
 from . import state as _state
 
 dashscope.api_key = LLM_API_KEY
 
 
-def synthesize_speech(text):
-    try:
-        syn = SpeechSynthesizer(
-            model="cosyvoice-v2",
-            voice=TTS_VOICE,
-            format=TTS_FORMAT,
-        )
-        audio_bytes = syn.call(text)
-        if not audio_bytes:
-            print("[TTS] 合成返回空数据", file=sys.stderr)
-            return None
-        audio_np, _ = sf.read(io.BytesIO(audio_bytes), dtype="float32")
-        return audio_np
-    except Exception as e:
-        print(f"[TTS 错误] {e}", file=sys.stderr)
-        return None
+class _Callback(ResultCallback):
+    def __init__(self, pcm_q):
+        self._q = pcm_q
+
+    def on_open(self): pass
+    def on_close(self): pass
+
+    def on_complete(self):
+        self._q.put(None)
+
+    def on_error(self, response):
+        print(f"[TTS 错误] {response}", file=sys.stderr)
+        self._q.put(None)
+
+    def on_data(self, data: bytes):
+        if data:
+            self._q.put(data)
+
+
+def stream_play(text):
+    pcm_q = queue.Queue()
+    syn = SpeechSynthesizer(
+        model="cosyvoice-v2",
+        voice=TTS_VOICE,
+        format=AudioFormat.PCM_16000HZ_MONO_16BIT,
+        callback=_Callback(pcm_q),
+    )
+    threading.Thread(target=syn.call, args=(text,), daemon=True).start()
+
+    with sd.OutputStream(
+        samplerate=TTS_SAMPLE_RATE,
+        channels=1,
+        dtype="int16",
+        device=OUTPUT_DEVICE_INDEX,
+        blocksize=1024,
+    ) as stream:
+        while True:
+            chunk = pcm_q.get()
+            if chunk is None:
+                break
+            stream.write(np.frombuffer(chunk, dtype=np.int16))
 
 
 def tts_playback_thread():
     while _state.running.is_set():
         try:
-            audio_np = _state.tts_audio_q.get(timeout=0.5)
+            text = _state.tts_text_q.get(timeout=0.5)
         except queue.Empty:
             continue
-
         try:
-            sd.play(audio_np, samplerate=TTS_SAMPLE_RATE, device=OUTPUT_DEVICE_INDEX)
-            sd.wait()
+            stream_play(text)
         except Exception as e:
-            print(f"[播放错误] {e}", file=sys.stderr)
+            print(f"[TTS 错误] {e}", file=sys.stderr)

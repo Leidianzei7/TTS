@@ -12,13 +12,24 @@ CHANNELS            = 1
 CHUNK               = 1024   # 每次读取帧数，越小延迟越低
 
 # ── VAD 参数 ──────────────────────────────────────────────
-SPEECH_HOLD_SEC   = 1.2   # 停顿多久后触发识别（秒）
-MIN_SPEECH_SEC    = 0.3   # 有效语音最短时长（秒），低于此值丢弃
-# WebRTC VAD
-VAD_AGGRESSIVENESS = 3    # 0-3，越高对噪声越激进（3 专为稳态背景噪声设计，适合开空调环境）
+SPEECH_HOLD_SEC = 1.2   # 停顿多久后触发识别（秒）
+MIN_SPEECH_SEC  = 0.3   # 有效语音最短时长（秒），低于此值丢弃
+
+# ── VAD 模式选择 ───────────────────────────────────────────
+# "energy" : 启动时校准底噪，阈值 = 底噪 + SPEECH_DELTA，动态跟随环境变化
+# "webrtc"  : Google WebRTC VAD，无需校准，基于频谱特征，稳态噪声下可能误判
+VAD_MODE = "energy"
+
+# 能量阈值 VAD（VAD_MODE = "energy"）
+NOISE_INIT_SEC  = 1.5   # 启动校准时长（秒），期间请保持安静
+NOISE_ALPHA     = 0.01  # 底噪 EMA 更新速率（越小越平滑）
+SPEECH_DELTA    = 3000  # 阈值 = 底噪 + 此值，根据说话音量调整
+
+# WebRTC VAD（VAD_MODE = "webrtc"，无需校准）
+VAD_AGGRESSIVENESS = 3    # 0-3，越高对噪声越激进
 VAD_FRAME_MS       = 20   # 每帧时长，只能是 10/20/30
 VAD_FRAME_SAMPLES  = SAMPLE_RATE * VAD_FRAME_MS // 1000
-VAD_SPEECH_TRIGGER = 3    # 连续 N 帧判定为语音才开始录制（60ms，抑制噪声突发）
+VAD_SPEECH_TRIGGER = 3    # 连续 N 帧判定为语音才开始录制
 
 # ── 唤醒词 ────────────────────────────────────────────────
 WAKE_WORD       = "小智小智"

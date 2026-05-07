@@ -6,8 +6,8 @@ import threading
 # 音频采集队列：audio_callback → process_loop
 audio_q = queue.Queue()
 
-# TTS 待播音频队列：generate_response → tts_playback_thread
-tts_audio_q = queue.Queue()
+# TTS 待合成文本队列：generate_response → tts_playback_thread
+tts_text_q = queue.Queue()
 
 # 主循环运行标志
 running = threading.Event()

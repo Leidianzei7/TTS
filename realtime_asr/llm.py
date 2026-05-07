@@ -5,7 +5,6 @@ import threading
 from openai import OpenAI
 from .config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, LLM_SYSTEM
 from . import state as _state
-from .tts import synthesize_speech
 
 llm_client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
 
@@ -14,9 +13,7 @@ _INSTR_PREFIX  = "[执行指令]："
 
 
 def _tts_and_enqueue(spoken):
-    audio_np = synthesize_speech(spoken)
-    if audio_np is not None:
-        _state.tts_audio_q.put(audio_np)
+    _state.tts_text_q.put(spoken)
 
 
 def generate_response(text):
