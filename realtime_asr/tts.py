@@ -40,7 +40,16 @@ def stream_play(text):
         format=AudioFormat.PCM_16000HZ_MONO_16BIT,
         callback=_Callback(pcm_q),
     )
-    threading.Thread(target=syn.call, args=(text,), daemon=True).start()
+
+    def _safe_call():
+        try:
+            syn.call(text)
+        except Exception as e:
+            print(f"[TTS 错误] {e}", file=sys.stderr)
+        finally:
+            pcm_q.put(None)  # 确保 stream_play 不会因线程异常而永久阻塞
+
+    threading.Thread(target=_safe_call, daemon=True).start()
 
     with sd.OutputStream(
         samplerate=TTS_SAMPLE_RATE,
