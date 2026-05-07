@@ -20,14 +20,15 @@ def audio_callback(indata, frames, time_info, status):
 
 
 def _dispatch_command(cmd):
+    import json as _json
     print(f"📋 指令原文: {cmd}", flush=True)
     print("⏳ 解析中...", flush=True)
-    spoken, instructions = generate_response(cmd)
+    spoken, commands = generate_response(cmd)
     if spoken:
         print(f"🔊 语音回复：{spoken}", flush=True)
         _state.tts_text_q.put(spoken)
-    if instructions:
-        print(f"\n✅ 标准化指令:\n" + "\n".join(instructions) + "\n", flush=True)
+    if commands:
+        print(f"\n✅ 标准化指令:\n{_json.dumps(commands, ensure_ascii=False, indent=2)}\n", flush=True)
     elif not spoken:
         print("[警告] LLM 回复解析失败", flush=True)
 
