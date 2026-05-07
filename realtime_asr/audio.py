@@ -19,22 +19,31 @@ def audio_callback(indata, frames, time_info, status):
     _state.audio_q.put(indata[:, 0].copy())
 
 
+def _dispatch_command(cmd):
+    print(f"📋 指令原文: {cmd}", flush=True)
+    print("⏳ 解析中...", flush=True)
+    spoken, instructions = generate_response(cmd)
+    if spoken:
+        print(f"🔊 语音回复：{spoken}", flush=True)
+        _state.tts_text_q.put(spoken)
+    if instructions:
+        print(f"\n✅ 标准化指令:\n" + "\n".join(instructions) + "\n", flush=True)
+    elif not spoken:
+        print("[警告] LLM 回复解析失败", flush=True)
+
+
 def handle_asr_result(text):
     pos, ww_len = find_wake_word(text)
     if pos >= 0:
         cmd = text[pos + ww_len :].strip("，。,.： ")
         if cmd:
-            print(f"📋 指令原文: {cmd}", flush=True)
-            print("⏳ 解析中...", flush=True)
-            generate_response(cmd)
+            _dispatch_command(cmd)
         else:
             print("👂 已唤醒，请说出指令...", flush=True)
             _state.waiting_for_command = True
     elif _state.waiting_for_command:
         _state.waiting_for_command = False
-        print(f"📋 指令原文: {text}", flush=True)
-        print("⏳ 解析中...", flush=True)
-        generate_response(text)
+        _dispatch_command(text)
 
 
 def _sample_noise_floor():

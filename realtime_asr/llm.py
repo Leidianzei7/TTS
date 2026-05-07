@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import sys
-import threading
 from openai import OpenAI
 from .config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, LLM_SYSTEM
-from . import state as _state
 
 llm_client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
 
@@ -12,11 +10,8 @@ _SPOKEN_PREFIX = "[口语回复]："
 _INSTR_PREFIX  = "[执行指令]："
 
 
-def _tts_and_enqueue(spoken):
-    _state.tts_text_q.put(spoken)
-
-
-def generate_response(text):
+def generate_response(text: str) -> tuple[str, list[str]]:
+    """调用 LLM，返回 (口语回复, 指令行列表)。调用方负责 TTS 播放和指令处理。"""
     stream = llm_client.chat.completions.create(
         model=LLM_MODEL,
         messages=[
@@ -27,26 +22,20 @@ def generate_response(text):
     )
 
     raw = ""
-    spoken_fired = False
+    spoken = ""
+    spoken_found = False
 
     for chunk in stream:
         delta = chunk.choices[0].delta.content or ""
         raw += delta
 
-        # 一旦 [口语回复]：...那行输出完整（出现换行），立即异步触发 TTS
-        if not spoken_fired and _SPOKEN_PREFIX in raw:
+        if not spoken_found and _SPOKEN_PREFIX in raw:
             start = raw.index(_SPOKEN_PREFIX) + len(_SPOKEN_PREFIX)
             after = raw[start:]
             if "\n" in after:
                 spoken = after[: after.index("\n")].strip()
-                spoken_fired = True
-                if spoken:
-                    print(f"🔊 语音回复：{spoken}", flush=True)
-                    threading.Thread(target=_tts_and_enqueue, args=(spoken,), daemon=True).start()
-                else:
-                    print("[警告] 口语回复为空，检查提示词格式", file=sys.stderr)
+                spoken_found = True
 
-    # 流式接收完毕，提取并打印执行指令
     instruction_lines = []
     in_instructions = False
     for line in raw.splitlines():
@@ -55,9 +44,8 @@ def generate_response(text):
         elif in_instructions and line.strip():
             instruction_lines.append(line)
 
-    if instruction_lines:
-        print(f"\n✅ 标准化指令:\n" + "\n".join(instruction_lines) + "\n", flush=True)
-
-    if not spoken_fired:
+    if not spoken_found:
         print(f"[LLM 原始输出]\n{raw}\n", flush=True)
         print("[警告] LLM 未生成口语回复，检查提示词格式", file=sys.stderr)
+
+    return spoken, instruction_lines
