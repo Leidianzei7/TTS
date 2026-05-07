@@ -62,14 +62,12 @@ def _parse_commands(raw: str) -> list[dict]:
     if idx == -1:
         return []
     after = raw[idx + len(_INSTR_PREFIX):].strip()
-    # 取第一行（LLM 有时会多输出换行后的解释文字）
     first_line = after.split("\n")[0].strip()
     try:
         result = json.loads(first_line)
         if isinstance(result, list):
             return result
     except json.JSONDecodeError:
-        # 尝试找 [...] 块
         start = after.find("[")
         end   = after.rfind("]")
         if start != -1 and end != -1 and end > start:

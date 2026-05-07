@@ -40,6 +40,7 @@ def stream_play(text):
         format=AudioFormat.PCM_16000HZ_MONO_16BIT,
         callback=_Callback(pcm_q),
     )
+
     def _safe_call():
         try:
             syn.call(text)
