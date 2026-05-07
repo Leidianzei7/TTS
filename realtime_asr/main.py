@@ -5,7 +5,7 @@ import threading
 import sounddevice as sd
 from .config import (
     DEVICE_INDEX, OUTPUT_DEVICE_INDEX, SAMPLE_RATE, CHANNELS, CHUNK,
-    SILENCE_THRESHOLD, WAKE_WORD, TTS_VOICE,
+    WAKE_WORD, TTS_VOICE,
 )
 from . import state as _state
 from .audio import audio_callback, process_loop
@@ -14,7 +14,7 @@ from .tts import tts_playback_thread
 
 def main():
     print(f"麦克风: Index={DEVICE_INDEX} | 扬声器: Index={OUTPUT_DEVICE_INDEX}（启英泰伦 USB）")
-    print(f"采样率: {SAMPLE_RATE} Hz | 静音阈值 RMS: {SILENCE_THRESHOLD}")
+    print(f"采样率: {SAMPLE_RATE} Hz | 阈值: 动态自适应")
     print(f"唤醒词: 【{WAKE_WORD}】 | TTS 音色: {TTS_VOICE}")
     print("─" * 50)
     print("说出唤醒词后下达指令，按 Ctrl+C 停止...\n")

@@ -12,14 +12,21 @@ CHANNELS            = 1
 CHUNK               = 1024   # 每次读取帧数，越小延迟越低
 
 # ── VAD 参数 ──────────────────────────────────────────────
-SILENCE_THRESHOLD = 4000  # RMS 能量阈值，环境噪大时调高（1500-2000）
-SPEECH_HOLD_SEC   = 1.0   # 停顿多久后触发识别（秒）
+SPEECH_HOLD_SEC   = 1.2   # 停顿多久后触发识别（秒）
 MIN_SPEECH_SEC    = 0.3   # 有效语音最短时长（秒），低于此值丢弃
+# WebRTC VAD
+VAD_AGGRESSIVENESS = 3    # 0-3，越高对噪声越激进（3 专为稳态背景噪声设计，适合开空调环境）
+VAD_FRAME_MS       = 20   # 每帧时长，只能是 10/20/30
+VAD_FRAME_SAMPLES  = SAMPLE_RATE * VAD_FRAME_MS // 1000
+VAD_SPEECH_TRIGGER = 3    # 连续 N 帧判定为语音才开始录制（60ms，抑制噪声突发）
 
 # ── 唤醒词 ────────────────────────────────────────────────
-WAKE_WORD  = "小智小智"
-_WW_LEN    = len(WAKE_WORD)
-_WW_PINYIN = "".join(lazy_pinyin(WAKE_WORD))  # 拼音版本，用于近同音字容错匹配
+WAKE_WORD       = "小智小智"
+WAKE_WORD_SHORT = "小智"
+_WW_LEN         = len(WAKE_WORD)
+_WWS_LEN        = len(WAKE_WORD_SHORT)
+_WW_PINYIN      = "".join(lazy_pinyin(WAKE_WORD))       # "xiaozhixiaozhi"
+_WWS_PINYIN     = "".join(lazy_pinyin(WAKE_WORD_SHORT)) # "xiaozhi"
 
 # ── LLM 配置 ──────────────────────────────────────────────
 LLM_API_KEY  = "sk-1c3077000f6347858d88c0936169d5af"

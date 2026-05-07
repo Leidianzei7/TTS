@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-共享可变状态：所有模块通过 `import realtime_asr.state as _state` 读写此处的变量，
-避免循环导入，也使状态边界清晰可见。
-"""
 import queue
 import threading
 
