@@ -23,7 +23,7 @@ VAD_MODE = "energy"
 # 能量阈值 VAD（VAD_MODE = "energy"）
 NOISE_INIT_SEC  = 1.5   # 启动校准时长（秒），期间请保持安静
 NOISE_ALPHA     = 0.01  # 底噪 EMA 更新速率（越小越平滑）
-SPEECH_DELTA    = 3000  # 阈值 = 底噪 + 此值，根据说话音量调整
+SPEECH_DELTA    = 5000  # 阈值 = 底噪 + 此值，根据说话音量调整
 
 # WebRTC VAD（VAD_MODE = "webrtc"，无需校准）
 VAD_AGGRESSIVENESS = 3    # 0-3，越高对噪声越激进
