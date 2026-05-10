@@ -4,7 +4,7 @@ import time
 import threading
 import sounddevice as sd
 from .config import (
-    DEVICE_INDEX, OUTPUT_DEVICE_INDEX, SAMPLE_RATE, CHANNELS, CHUNK,
+    DEVICE_INDEX, OUTPUT_DEVICE_INDEX, SAMPLE_RATE, HW_SAMPLE_RATE, CHANNELS, CHUNK,
     WAKE_WORD, TTS_VOICE,
 )
 from . import state as _state
@@ -27,10 +27,10 @@ def main():
     try:
         with sd.InputStream(
             device=DEVICE_INDEX,
-            samplerate=SAMPLE_RATE,
+            samplerate=HW_SAMPLE_RATE,
             channels=CHANNELS,
             dtype="float32",
-            blocksize=CHUNK,
+            blocksize=CHUNK * 3,
             callback=audio_callback,
         ):
             while _state.running.is_set():

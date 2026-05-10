@@ -5,9 +5,10 @@ from pypinyin import lazy_pinyin
 
 # ── 设备配置 ──────────────────────────────────────────────
 # 运行 `python3 -c "import sounddevice as sd; print(sd.query_devices())"` 查看设备列表
-DEVICE_INDEX        = 2      # 麦克风输入设备编号（USB PnP 输入端）
-OUTPUT_DEVICE_INDEX = 1      # 扬声器输出设备编号（USB PnP 输出端，同一物理模块）
-SAMPLE_RATE         = 16000  # SenseVoiceSmall 要求 16kHz
+DEVICE_INDEX        = 1      # 麦克风输入设备编号（USB PnP Audio Device）
+OUTPUT_DEVICE_INDEX = 1      # 扬声器输出设备编号（同一 USB PnP 设备）
+HW_SAMPLE_RATE      = 48000  # 硬件原生采样率
+SAMPLE_RATE         = 16000  # SenseVoiceSmall 要求 16kHz，代码内自动重采样
 CHANNELS            = 1
 CHUNK               = 1024   # 每次读取帧数，越小延迟越低
 

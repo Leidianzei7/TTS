@@ -5,9 +5,10 @@ import queue
 import threading
 import numpy as np
 import sounddevice as sd
+from scipy import signal as scipy_signal
 import dashscope
 from dashscope.audio.tts_v2 import SpeechSynthesizer, AudioFormat, ResultCallback
-from .config import TTS_VOICE, TTS_SAMPLE_RATE, OUTPUT_DEVICE_INDEX, LLM_API_KEY
+from .config import TTS_VOICE, TTS_SAMPLE_RATE, HW_SAMPLE_RATE, OUTPUT_DEVICE_INDEX, LLM_API_KEY, CHUNK
 from . import state as _state
 
 dashscope.api_key = LLM_API_KEY
@@ -51,17 +52,20 @@ def stream_play(text):
     threading.Thread(target=_safe_call, daemon=True).start()
 
     with sd.OutputStream(
-        samplerate=TTS_SAMPLE_RATE,
+        samplerate=HW_SAMPLE_RATE,
         channels=1,
         dtype="int16",
         device=OUTPUT_DEVICE_INDEX,
-        blocksize=1024,
+        blocksize=CHUNK * 3,
     ) as stream:
         while True:
             chunk = pcm_q.get()
             if chunk is None:
                 break
-            stream.write(np.frombuffer(chunk, dtype=np.int16))
+            pcm     = np.frombuffer(chunk, dtype=np.int16).astype(np.float32)
+            pcm_48k = scipy_signal.resample_poly(pcm, up=3, down=1)
+            pcm_48k = pcm_48k.clip(-32768, 32767).astype(np.int16)
+            stream.write(pcm_48k)
 
 
 def tts_playback_thread():

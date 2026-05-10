@@ -4,7 +4,8 @@ import sys
 import json
 import queue
 import numpy as np
-from .config import (SAMPLE_RATE, CHUNK, NOISE_INIT_SEC, NOISE_ALPHA,
+from scipy import signal as scipy_signal
+from .config import (SAMPLE_RATE, HW_SAMPLE_RATE, CHUNK, NOISE_INIT_SEC, NOISE_ALPHA,
                      SPEECH_DELTA, VAD_MODE)
 from . import state as _state
 from .asr import recognize
@@ -16,7 +17,8 @@ from .vad import run_vad
 def audio_callback(indata, frames, time_info, status):
     if status:
         print(f"[音频状态] {status}", file=sys.stderr)
-    _state.audio_q.put(indata[:, 0].copy())
+    chunk = scipy_signal.resample_poly(indata[:, 0], up=1, down=3).astype(np.float32)
+    _state.audio_q.put(chunk.copy())
 
 
 def _dispatch_command(cmd):

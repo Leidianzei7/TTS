@@ -4,23 +4,28 @@
 > 对话变长时提醒用户执行 `/compact` 压缩上下文以节省 token。
 
 ## 硬件
-- 启英泰伦 USB 声音模块，sounddevice Index=2（麦克风）/ Index=1（扬声器）
+- 启英泰伦 USB 声音模块，Index=1（USB PnP Audio Device，硬件 48kHz），代码内 scipy 重采样 48k↔16k
 
 ## 技术栈
-- 音频采集：sounddevice（macOS 无 portaudio，弃用 pyaudio）
-- VAD：双模式可切换（见下方关键参数）
-- 语音识别：FunASR SenseVoiceSmall + fsmn-vad，CPU 推理，直接传 numpy array
+- 运行平台：Linux（wheeltec 机器人），Python 3.10，无 conda 环境
+- 音频采集：sounddevice，48kHz 硬件采集，scipy `resample_poly` 软件重采样到 16k 喂 ASR；TTS 16k PCM 反向上采样到 48k 播放
+- VAD：能量阈值 / WebRTC 双模式可切换（见下方关键参数）
+- 语音识别：FunASR SenseVoiceSmall + fsmn-vad，CPU 推理。**流程是"流式 VAD + 离线 ASR"——VAD 切完整段后整段送入推理**
 - LLM：阿里云 DashScope Qwen（qwen-turbo），OpenAI 兼容格式，流式输出
-- TTS：DashScope CosyVoice v2，流式合成边合成边播，首字出声 ~100ms
-- Python 3.9，无 conda 环境
+- TTS：DashScope CosyVoice v2，**单片 PCM 到达即重采样并播放**（首字 ~150ms）
 
 ## 当前进度
 - [x] 设备检测与录音验证
 - [x] 实时采集 → VAD → SenseVoiceSmall → 屏幕打印
 - [x] 唤醒词触发（支持单个"小智"及近同音容错）→ ASR → Qwen LLM → 指令输出
-- [x] TTS 语音回复（流式，低延迟）
+- [x] TTS 语音回复（流式播放，单片重采样到 48k 即写入声卡）
 - [x] 代码拆分为 `realtime_asr/` 包（config / audio / asr / llm / tts / wake_word / state）
 - [ ] 视觉多模态扩展
+
+## 经验与坑
+- **流式 ASR 不能只换模型**：试过把 `asr.py` 的 SenseVoice 换成 `paraformer-zh-streaming`，CPU 上反而慢得多（chunk 切片后每片都重算 encoder 上下文）。要拿到流式收益，必须把 `audio.py` / `vad.py` 改成"边采边喂 ASR"。否则维持 SenseVoice 一段一次推理是最优解
+- **延迟瓶颈不在 ASR**：当前感知延迟主要来自 `SPEECH_HOLD_SEC=1.2s` 静音等待。要提速优先调它，而不是换模型
+- **TTS 必须按片播放**：48k 重采样改造一度引入"全部攒齐再播"的回归，导致首字延迟 ~1.2s。修复后 `stream_play` 收到一片就 `resample_poly` + `stream.write`
 
 ## 分支工作流（严格遵守，勿误改）
 
@@ -57,8 +62,9 @@ python3 main.py   # Ctrl+C 退出
 ## 关键参数（realtime_asr/config.py）
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
-| DEVICE_INDEX | 2 | 麦克风设备 |
-| OUTPUT_DEVICE_INDEX | 1 | 扬声器设备 |
+| DEVICE_INDEX | 1 | 麦克风设备（USB PnP，硬件 48kHz，代码内重采样至 16k） |
+| OUTPUT_DEVICE_INDEX | 1 | 扬声器设备（同一 USB PnP，代码内重采样至 48k） |
+| HW_SAMPLE_RATE | 48000 | 硬件原生采样率 |
 | VAD_MODE | "energy" | VAD 模式："energy" 或 "webrtc" |
 | SPEECH_HOLD_SEC | 1.2 | 停顿多久触发识别（秒） |
 | WAKE_WORD | 小智小智 | 主唤醒词 |
@@ -71,7 +77,7 @@ python3 main.py   # Ctrl+C 退出
 |------|--------|------|
 | NOISE_INIT_SEC | 1.5 | 启动校准时长（秒），TTS 提示后采样中位数 |
 | NOISE_ALPHA | 0.01 | 底噪 EMA 更新速率 |
-| SPEECH_DELTA | 3000 | 阈值 = 底噪 RMS + 此值 |
+| SPEECH_DELTA | 5000 | 阈值 = 底噪 RMS + 此值 |
 
 ### VAD_MODE = "webrtc"（无需校准）
 | 参数 | 默认值 | 说明 |
