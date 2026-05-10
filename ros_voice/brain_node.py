@@ -1,35 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-brain_node: LLM 推理 + TTS 播放 + 指令发布
-订阅 /voice/command      (std_msgs/String) — 来自 voice_node 的用户指令
-发布 /robot/instructions (std_msgs/String) — JSON 数组，每项格式：
-    {"cmd": "move_forward", "params": {"speed": 0.2, "distance": 1.0}}
+brain_node: 纯 ROS 层。
+订阅 /voice/command      (std_msgs/String) — 用户指令文本。
+发布 /robot/instructions (std_msgs/String) — JSON 数组，每项 {"cmd": ..., "params": {...}}。
+处理委托给 realtime_asr.pipeline.process_command。
 """
 import sys
 import json
 import queue
 import threading
+from pathlib import Path
 
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 
-from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from realtime_asr.llm import generate_response
-from realtime_asr.tts import stream_play
+from realtime_asr.pipeline import process_command
 
 
 class BrainNode(Node):
     def __init__(self):
         super().__init__("brain_node")
-
         self._instr_pub = self.create_publisher(String, "/robot/instructions", 10)
         self.create_subscription(String, "/voice/command", self._on_command, 10)
 
-        # 串行工作队列：避免 LLM 并发调用
         self._work_q = queue.Queue()
         threading.Thread(target=self._work_loop, daemon=True).start()
 
@@ -43,21 +40,13 @@ class BrainNode(Node):
             cmd = self._work_q.get()
             self.get_logger().info(f"收到指令: {cmd}")
             try:
-                spoken, commands = generate_response(cmd)
-
-                if spoken:
-                    self.get_logger().info(f"语音回复: {spoken}")
-                    stream_play(spoken)
-
-                if commands:
-                    payload = json.dumps(commands, ensure_ascii=False)
+                instructions = process_command(cmd, log=self.get_logger().info)
+                if instructions:
+                    payload = json.dumps(instructions, ensure_ascii=False)
                     self.get_logger().info(f"发布指令: {payload}")
-                    msg = String()
-                    msg.data = payload
-                    self._instr_pub.publish(msg)
+                    self._instr_pub.publish(String(data=payload))
                 else:
                     self.get_logger().info("无机械指令")
-
             except Exception as e:
                 self.get_logger().error(f"处理指令失败: {e}")
 
