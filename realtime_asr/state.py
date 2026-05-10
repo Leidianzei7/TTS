@@ -3,9 +3,6 @@
 import queue
 import threading
 
-# 音频采集队列：audio_callback → process_loop
-audio_q = queue.Queue()
-
 # TTS 待合成文本队列：generate_response → tts_playback_thread
 tts_text_q = queue.Queue()
 

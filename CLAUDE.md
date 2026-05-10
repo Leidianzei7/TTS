@@ -20,7 +20,6 @@
 - [x] 唤醒词触发（支持单个"小智"及近同音容错）→ ASR → Qwen LLM → 指令输出
 - [x] TTS 语音回复（流式播放，单片重采样到 48k 即写入声卡）
 - [x] 代码拆分为 `realtime_asr/` 包（config / audio / asr / llm / tts / wake_word / state）
-- [ ] 视觉多模态扩展
 
 ## 经验与坑
 - **流式 ASR 不能只换模型**：试过把 `asr.py` 的 SenseVoice 换成 `paraformer-zh-streaming`，CPU 上反而慢得多（chunk 切片后每片都重算 encoder 上下文）。要拿到流式收益，必须把 `audio.py` / `vad.py` 改成"边采边喂 ASR"。否则维持 SenseVoice 一段一次推理是最优解

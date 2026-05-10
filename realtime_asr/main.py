@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import time
 import threading
-import sounddevice as sd
 from .config import (
-    DEVICE_INDEX, OUTPUT_DEVICE_INDEX, SAMPLE_RATE, HW_SAMPLE_RATE, CHANNELS, CHUNK,
+    DEVICE_INDEX, OUTPUT_DEVICE_INDEX, SAMPLE_RATE,
     WAKE_WORD, TTS_VOICE,
 )
 from . import state as _state
-from .audio import audio_callback, process_loop
+from .audio import run_audio_pipeline, handle_asr_result
 from .tts import tts_playback_thread
 
 
@@ -19,29 +17,17 @@ def main():
     print("─" * 50)
     print("说出唤醒词后下达指令，按 Ctrl+C 停止...\n")
 
-    proc_thread = threading.Thread(target=process_loop,        daemon=True)
-    tts_thread  = threading.Thread(target=tts_playback_thread, daemon=True)
-    proc_thread.start()
+    tts_thread = threading.Thread(target=tts_playback_thread, daemon=True)
     tts_thread.start()
 
     try:
-        with sd.InputStream(
-            device=DEVICE_INDEX,
-            samplerate=HW_SAMPLE_RATE,
-            channels=CHANNELS,
-            dtype="float32",
-            blocksize=CHUNK * 3,
-            callback=audio_callback,
-        ):
-            while _state.running.is_set():
-                time.sleep(0.1)
+        run_audio_pipeline(on_asr_text=handle_asr_result)
     except KeyboardInterrupt:
         print("\n\n停止识别。")
     except Exception as e:
         print(f"\n音频设备错误: {e}")
     finally:
         _state.running.clear()
-        proc_thread.join(timeout=3)
         tts_thread.join(timeout=3)
 
 
