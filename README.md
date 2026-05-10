@@ -13,7 +13,7 @@
 | 3 | VAD (energy / webrtc) | ✅ | `realtime_asr.vad.run_vad` | 从队列逐块取，逐帧判定语音/静音；积满静音阈值后切段 |
 | 4 | **ASR 推理** | ❌ **离线** | FunASR `SenseVoiceSmall.generate(audio_np)` | **VAD 切出完整段才一次性送推理**。CPU 上换 `paraformer-zh-streaming` 反而更慢，故保留 SenseVoice 整段推理 |
 | 5 | 唤醒词匹配 | ❌ 批 | `wake_word.find_wake_word` | 对 ASR 输出的整句字符串做匹配，输入本就是离散文本 |
-| 6 | LLM (Qwen-turbo) | ✅ 部分流式 | OpenAI SDK `stream=True` | token 流式接收。但口语回复要等 `\n` 到达才能截取，机械指令 JSON 必须等整段流结束才能解析 |
+| 6 | LLM (Qwen-turbo) | ✅ 部分流式 | OpenAI SDK `stream=True` | token 流式接收。**口语回复**等 `\n`（行边界）即可截取并送 TTS，不必等流结束；**机械指令 JSON** 必须等整段流结束才能 `json.loads`（语法约束） |
 | 7 | TTS 合成 (CosyVoice v2) | ✅ | DashScope `ResultCallback.on_data` | 服务端边合成边回 PCM 片段，回调入队 |
 | 8 | TTS 重采样 16k→48k + 播放 | ✅ | `resample_poly` + `OutputStream.write` | **收到一片立即重采样并写声卡**，首字延迟 ~150 ms |
 
