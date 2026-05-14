@@ -25,7 +25,7 @@
 - **流式 ASR 不能只换模型**：试过把 `asr.py` 的 SenseVoice 换成 `paraformer-zh-streaming`，CPU 上反而慢得多（chunk 切片后每片都重算 encoder 上下文）。要拿到流式收益，必须把 `audio.py` / `vad.py` 改成"边采边喂 ASR"。否则维持 SenseVoice 一段一次推理是最优解
 - **延迟瓶颈不在 ASR**：当前感知延迟主要来自 `SPEECH_HOLD_SEC=1.2s` 静音等待。要提速优先调它，而不是换模型
 - **TTS 必须按片播放**：48k 重采样改造一度引入"全部攒齐再播"的回归，导致首字延迟 ~1.2s。修复后 `stream_play` 收到一片就 `resample_poly` + `stream.write`
-- **funasr-onnx 切不掉 PyTorch**：试过把 ASR 切到 `funasr-onnx` + `onnxruntime` 以省内存/提速。发现两个问题：① `funasr_onnx/sensevoice_bin.py` 推理代码硬 `import torch`（CTC 解码用 `torch.from_numpy` / `torch.unique_consecutive`），torch 卸不掉；② 首次加载需要 `funasr` + `onnxscript` 在本机把 `.pt` 导出为 `.onnx`，在 6.9 GB 无 swap 的机器上导出峰值内存 ~3.7 GB 直接被 OOM-killer 杀死。已回退，保持原 PyTorch 路径。若要重试，需先 `fallocate -l 8G /swapfile` 加 swap，或在其它机器导出好 `model_quant.onnx` 再拷过来
+- **SenseVoiceSmall 不值得切 ONNX**：调研后放弃，四个原因：① `funasr-onnx` 推理代码硬依赖 torch（CTC 解码用 `torch.from_numpy` / `torch.unique_consecutive`），改完 torch 照样卸不掉，节省不了存储；② 当前延迟瓶颈是 `SPEECH_HOLD_SEC=1.2s` VAD 静音等待，ASR 推理本身只占 200-500ms，即使 ONNX 提速 2× 端到端感知改善微乎其微；③ 需要大幅改动工程代码（`asr.py` API、后处理、依赖管理）；④ PyTorch 版 `.pt` 转 ONNX 需在本机执行 `torch.onnx.export`，6.9 GB 无 swap 机器上峰值内存 ~3.7 GB 直接 OOM，只能下载第三方已转换好的模型，引入额外依赖
 
 ## 分支工作流（严格遵守，勿误改）
 
