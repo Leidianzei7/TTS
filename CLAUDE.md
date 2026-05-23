@@ -22,6 +22,13 @@
 - [x] 代码拆分为 `realtime_asr/` 包（config / audio / vad / asr / llm / tts / wake_word / state / commands）
 - [ ] 视觉多模态扩展
 
+## 经验与坑
+- **流式 ASR 不能只换模型**：试过把 `asr.py` 的 SenseVoice 换成 `paraformer-zh-streaming`，CPU 上反而更慢。要拿到流式收益，必须把 `audio.py` / `vad.py` 改成"边采边喂 ASR"，否则 SenseVoice 一段一次推理是最优解
+- **延迟瓶颈不在 ASR**：感知延迟主要来自 `SPEECH_HOLD_SEC=1.2s` 静音等待，要提速优先调它，而不是换模型
+- **TTS 必须按片播放**：一度引入"全部攒齐再播"的回归导致首字延迟 ~1.2s，修复后收到一片就立即写入声卡
+- **SenseVoiceSmall 不值得切 ONNX**：四个原因：① `funasr-onnx` 推理代码硬依赖 torch（CTC 解码），改完 torch 照样卸不掉；② 当前瓶颈是 VAD 静音等待，ASR 推理本身只占 200-500ms，ONNX 提速 2× 端到端改善微乎其微；③ 需大幅改动 `asr.py` API 和依赖管理；④ `.pt` 转 ONNX 需在本机跑 `torch.onnx.export`，内存峰值 ~3.7GB，无 swap 机器直接 OOM
+- **ros_voice/commands.py 已删除**：ros_voice 重构后收敛为纯 ROS 层，指令处理委托给 `pipeline`，`commands.py` 不再需要
+
 ## 分支工作流（严格遵守，勿误改）
 
 | 改动范围 | 工作分支 | 同步方式 |
