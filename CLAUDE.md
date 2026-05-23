@@ -12,14 +12,14 @@
 - 语音识别：FunASR SenseVoiceSmall + fsmn-vad，CPU 推理，直接传 numpy array
 - LLM：阿里云 DashScope Qwen（qwen-turbo），OpenAI 兼容格式，流式输出
 - TTS：DashScope CosyVoice v2，流式合成边合成边播，首字出声 ~100ms
-- Python 3.9，无 conda 环境
+- Python 3.11，venv 在项目根目录 `venv/`（系统 Python 3.14 缺依赖，勿用）
 
 ## 当前进度
 - [x] 设备检测与录音验证
 - [x] 实时采集 → VAD → SenseVoiceSmall → 屏幕打印
 - [x] 唤醒词触发（支持单个"小智"及近同音容错）→ ASR → Qwen LLM → 指令输出
 - [x] TTS 语音回复（流式，低延迟）
-- [x] 代码拆分为 `realtime_asr/` 包（config / audio / asr / llm / tts / wake_word / state）
+- [x] 代码拆分为 `realtime_asr/` 包（config / audio / vad / asr / llm / tts / wake_word / state / commands）
 - [ ] 视觉多模态扩展
 
 ## 分支工作流（严格遵守，勿误改）
@@ -28,6 +28,7 @@
 |---|---|---|
 | `realtime_asr/`、根目录文件 | `asrdev` | 改完 merge 到 `main` |
 | `ros_voice/` | `rosdev` | 改完 merge 到 `main` |
+| Mac 本机环境配置 | `mac_snapshot` | 不 merge 回 main，仅作快照 |
 
 **规则：在任何分支上动手之前，必须先从 `main` pull（`git merge main`），防止覆盖他人改动。**
 
@@ -43,7 +44,7 @@ git checkout rosdev && git merge main
 git checkout main && git merge rosdev
 ```
 
-历史备注：`mac_complete` 为 ROS 改造前的 Mac 完整版快照，已删除。
+历史备注：`mac_complete` 为 ROS 改造前的 Mac 完整版快照，已删除。`mac_snapshot` 为当前 Mac 机器的环境快照（Python 3.11 venv），不参与功能迭代。
 
 ## 研发思路
 参考代码（ref codes/）覆盖：录音、VAD、ASR、LLM对话、TTS合成、多模态视觉。
@@ -51,7 +52,8 @@ git checkout main && git merge rosdev
 
 ## 运行
 ```bash
-python3 main.py   # Ctrl+C 退出
+source venv/bin/activate   # 激活虚拟环境（每个新终端窗口执行一次）
+python3 main.py            # Ctrl+C 退出
 ```
 
 ## 关键参数（realtime_asr/config.py）
@@ -71,7 +73,8 @@ python3 main.py   # Ctrl+C 退出
 |------|--------|------|
 | NOISE_INIT_SEC | 1.5 | 启动校准时长（秒），TTS 提示后采样中位数 |
 | NOISE_ALPHA | 0.01 | 底噪 EMA 更新速率 |
-| SPEECH_DELTA | 3000 | 阈值 = 底噪 RMS + 此值 |
+| SPEECH_DELTA | 5000 | 阈值 = 底噪 RMS + 此值 |
+| MIN_SPEECH_SEC | 0.3 | 有效语音最短时长（秒），低于此值丢弃 |
 
 ### VAD_MODE = "webrtc"（无需校准）
 | 参数 | 默认值 | 说明 |
