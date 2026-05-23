@@ -22,36 +22,14 @@
 - [x] 代码拆分为 `realtime_asr/` 包（config / audio / vad / asr / llm / tts / wake_word / state / commands）
 - [ ] 视觉多模态扩展
 
-## 经验与坑
-- **流式 ASR 不能只换模型**：试过把 `asr.py` 的 SenseVoice 换成 `paraformer-zh-streaming`，CPU 上反而更慢。要拿到流式收益，必须把 `audio.py` / `vad.py` 改成"边采边喂 ASR"，否则 SenseVoice 一段一次推理是最优解
-- **延迟瓶颈不在 ASR**：感知延迟主要来自 `SPEECH_HOLD_SEC=1.2s` 静音等待，要提速优先调它，而不是换模型
-- **TTS 必须按片播放**：一度引入"全部攒齐再播"的回归导致首字延迟 ~1.2s，修复后收到一片就立即写入声卡
-- **SenseVoiceSmall 不值得切 ONNX**：四个原因：① `funasr-onnx` 推理代码硬依赖 torch（CTC 解码），改完 torch 照样卸不掉；② 当前瓶颈是 VAD 静音等待，ASR 推理本身只占 200-500ms，ONNX 提速 2× 端到端改善微乎其微；③ 需大幅改动 `asr.py` API 和依赖管理；④ `.pt` 转 ONNX 需在本机跑 `torch.onnx.export`，内存峰值 ~3.7GB，无 swap 机器直接 OOM
-- **ros_voice/commands.py 已删除**：ros_voice 重构后收敛为纯 ROS 层，指令处理委托给 `pipeline`，`commands.py` 不再需要
+## 分支工作流
 
-## 分支工作流（严格遵守，勿误改）
+| 分支 | 用途 |
+|---|---|
+| `main` | 主开发分支，功能直接提交到此 |
+| `mac_snapshot` | Mac 本机环境快照（Python 3.11 venv），不 merge 回 main |
 
-| 改动范围 | 工作分支 | 同步方式 |
-|---|---|---|
-| `realtime_asr/`、根目录文件 | `asrdev` | 改完 merge 到 `main` |
-| `ros_voice/` | `rosdev` | 改完 merge 到 `main` |
-| Mac 本机环境配置 | `mac_snapshot` | 不 merge 回 main，仅作快照 |
-
-**规则：在任何分支上动手之前，必须先从 `main` pull（`git merge main`），防止覆盖他人改动。**
-
-```
-# asrdev 上开发
-git checkout asrdev && git merge main
-# ...改动...
-git checkout main && git merge asrdev
-
-# rosdev 上开发
-git checkout rosdev && git merge main
-# ...改动...
-git checkout main && git merge rosdev
-```
-
-历史备注：`mac_complete` 为 ROS 改造前的 Mac 完整版快照，已删除。`mac_snapshot` 为当前 Mac 机器的环境快照（Python 3.11 venv），不参与功能迭代。
+历史备注：`asrdev` / `rosdev` 已删除（远程已移除，本地可清理）。`mac_complete` 为 ROS 改造前快照，已删除。
 
 ## 研发思路
 参考代码（ref codes/）覆盖：录音、VAD、ASR、LLM对话、TTS合成、多模态视觉。
