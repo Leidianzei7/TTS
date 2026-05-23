@@ -29,7 +29,21 @@
 | `main` | 主开发分支，功能直接提交到此 |
 | `mac_snapshot` | Mac 本机环境快照（Python 3.11 venv），不 merge 回 main |
 
-历史备注：`asrdev` / `rosdev` 已删除（远程已移除，本地可清理）。`mac_complete` 为 ROS 改造前快照，已删除。
+历史备注：`asrdev` / `rosdev` 已删除（远程及本地均已移除）。`mac_complete` 为 ROS 改造前快照，已删除。
+
+## 所需库（直接依赖）
+| 库 | 用途 |
+|---|---|
+| sounddevice | 音频采集与播放 |
+| numpy | 音频数据处理 |
+| torch / torchaudio | FunASR 推理后端 |
+| funasr | SenseVoiceSmall ASR + fsmn-vad |
+| openai | DashScope LLM（OpenAI 兼容格式） |
+| dashscope | CosyVoice v2 TTS |
+| pypinyin | 唤醒词拼音容错匹配 |
+| webrtcvad | WebRTC VAD 模式（可选） |
+
+完整依赖见 `requirements.txt`，用 `pip install -r requirements.txt` 一键安装。
 
 ## 研发思路
 参考代码（ref codes/）覆盖：录音、VAD、ASR、LLM对话、TTS合成、多模态视觉。
